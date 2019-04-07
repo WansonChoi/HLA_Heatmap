@@ -201,195 +201,195 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
 
 
 
-    # if MAKING_NEW_ASSOC:
-    #
-    #     ########## < [4] Making new *.assoc file for AA markers. > ##########
-    #
-    #     print(std_MAIN_PROCESS_NAME + "Making new *.assoc file for AA markers.")
-    #
-    #     """
-    #     Above preprocessed `__MAPTABLE__` will be the main content of Heatmap plot.
-    #     (i.e. amino acid characters in each cell)
-    #
-    #     In this block, P-value information corresponding to those amino acid characters will be obtained here.
-    #     (i.e. the color of each of those amino acid characters)
-    #     Besides, the sign will be given to those p-value depending on whether its OR value is above 1 or not.
-    #     (ex. if OR is 0.278(<1), then its p-value will be -7.792000e-117(negative. to represent it is risky but not protective).
-    #
-    #
-    #
-    #     Rememeber that `__MAPTABLE__` was subsetted to have only AA markers of which the relative position appears in `__ASSOC_RESULT_AA__`.
-    #
-    #     As iterating over AA relative poisitions of `__MAPTABLE__` (ex. for i in [-27, -21, -18, ..., 232, 233, 234] <= filtered above.)
-    #     and checking how many corresponding markers are in `__ASSOC_RESULT__`, the process is considering next two major cases.
-    #
-    #     (1) Bi-allelic,
-    #     (2) more than Tri-allelic.
-    #
-    #     If the markers of `__ASSOC_RESULT_AA__` at each relative position is given as `df_BroughtMarkers`, then it would looks
-    #     like this.
-    #
-    #
-    #     ### More than bi-allelic ###
-    #
-    #     AAvar_assoc
-    #     SNP
-    #     AA_DRB1_-25_32665484_K    0.3133
-    #     AA_DRB1_-25_32665484_R    0.3173
-    #     AA_DRB1_-25_32665484_x    0.9150
-    #     Name: P, dtype: float64
-    #
-    #
-    #     ### Bi-allelic ###
-    #
-    #     AAvar_assoc
-    #     SNP
-    #     AA_DRB1_-25_32665484    0.3133    # The bi-allelic marker doesn't have AA character('K', 'R', ...) in the label.
-    #     Name: P, dtype: float64
-    #
-    #
-    #     (cf) Only single characters will be dealt. (i.e. The markers like 'AA_DQB1_71_32632639_exon2_AD' will be ignored.
-    #
-    #
-    #     """
-    #
-    #
-    #     # The main process will be done iterating the column of `__MAPTABLE__` DataFrame.
-    #     COLNAMES = __MAPTABLE__.columns.tolist()
-    #
-    #
-    #     for_new_assoc = []
-    #
-    #     for i in range(0, __MAPTABLE__.shape[1]):
-    #     # for i in range(0, 10):
-    #
-    #         print("=================================%d iteration=================================" % i, end='\r')
-    #
-    #         # t_col_maptable := `AAname` (variable in R)
-    #         t_col_maptable = COLNAMES[i] # ex) ('-27', '32634368', 'exon1')
-    #         print("\nAAname : {}".format(t_col_maptable))
-    #
-    #
-    #         ### Bringing markers in each relative position to `df_BroughtMarkers`.
-    #         df_BroughtMarkers = __ASSOC_RESULT_AA__.loc[[t_col_maptable[0]]]
-    #         print("\ndf_BroughtMarkers : \n{}".format(df_BroughtMarkers))
-    #
-    #
-    #
-    #         if df_BroughtMarkers.shape[0] > 0:
-    #
-    #             ### 1. P-value
-    #             # AAvar_assoc (P-value column)
-    #             AAvar_assoc = df_BroughtMarkers.loc[:, "P"]
-    #             # print("\nAAvar_assoc(P-value) : \n")
-    #             # print(AAvar_assoc)
-    #
-    #             ### 2. AA character in `__MAPTABLE__` - (variable in R : `AAs`)
-    #             AAs = __MAPTABLE__.iloc[:, i]
-    #             # print("\nAAs")
-    #             # print(AAs)
-    #
-    #             ### 3. OR
-    #             t_OR = df_BroughtMarkers.loc[:, "OR"]
-    #             # print("\nOR")
-    #             # print(t_OR)
-    #
-    #
-    #             ### Preparing index for `AAvar_assoc`. ###
-    #
-    #             if df_BroughtMarkers.shape[0] > 1:      ##### More than bi-allelic #####
-    #
-    #                 ### Newly index `AAvar_assoc`.
-    #
-    #                 # (variable in R) - (3) : `AAvariants`
-    #                 AAvariants = df_BroughtMarkers.loc[:, "SNP"]
-    #
-    #                 AAvar_assoc.index = pd.Index([item.split('_')[-1] for item in AAvariants.tolist()])
-    #                 # ex) ['AA_DRB1_-25_32665484_K', 'AA_DRB1_-25_32665484_R', 'AA_DRB1_-25_32665484_x']
-    #                 # => ['K', 'R', 'x']
-    #
-    #                 # print("\nNew AAvar_assoc : \n")
-    #                 # print(AAvar_assoc)
-    #
-    #                 ### Transforming AA character seq. of `__MAPTABLE__` to '-log(x)' value.
-    #                 AAs2 = AAs.apply(lambda x : -log10(AAvar_assoc.loc[x]))
-    #                 # This part actually needs exception handling for KeyError...
-    #
-    #                 ### Flippng based on OR
-    #                 t_OR.index = AAvar_assoc.index
-    #                 AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[x] > 1) - 1))
-    #
-    #
-    #                 """
-    #                 So, when Tri-allelic or more is given like this,
-    #
-    #                 SNP
-    #                 AA_DRB1_-25_32665484_K    0.3133
-    #                 AA_DRB1_-25_32665484_R    0.3173
-    #                 AA_DRB1_-25_32665484_x    0.9150
-    #                 Name: P, dtype: float64
-    #
-    #
-    #                 I will make this to the next form.
-    #
-    #                 K    0.3133
-    #                 R    0.3173
-    #                 x    0.9150
-    #                 Name: P, dtype: float64
-    #
-    #
-    #                 I want to use the `df_BroughtMarkers` with that index(Only AA character).
-    #                 Because, if that DataFrame is prepared, when `__MAPTABLE__` is given like this,
-    #
-    #                 genomic_position  32557506 32557503 32557482 32557479 32557437 32557434  \
-    #                 relative_position      -25      -24      -17      -16       -2       -1
-    #                 codon                  AAG      CTC      ACA      GCG      TTG      GCT
-    #                 DRB1*01:01:01            K        L        T        A        L        A
-    #                 DRB1*03:01:01:01         R        L        A        V        L        A
-    #                 DRB1*04:01:01            K        F        A        A        L        A
-    #                 DRB1*04:03:01            K        F        A        A        L        A
-    #                 DRB1*04:04:01            K        F        A        A        L        A
-    #                 DRB1*04:05:01            K        F        A        A        L        A
-    #
-    #                 We can make `NEW_ASSOC` just by this single command.
-    #
-    #                 > AAvar_assoc.loc[x])
-    #
-    #                 It will be much easier with .loc[] operator.
-    #
-    #                 """
-    #
-    #             elif df_BroughtMarkers.shape[0] == 1:   ##### Bi-allelic #####
-    #
-    #                 ### Newly indexing `AAvar_assoc`.
-    #
-    #                 refA = df_BroughtMarkers.loc[:, "A1"].iat[0]
-    #                 AAvar_assoc.index = pd.Index([refA])
-    #
-    #                 # print("\nNew AAvar_assoc : \n")
-    #                 # print(AAvar_assoc)
-    #
-    #                 ### Transforming AA character seq. of `__MAPTABLE__` to '-log(x)' value.
-    #                 AAs2 = AAs.apply(lambda x: -log10(AAvar_assoc.loc[refA]))
-    #                 # Same p-value will be given to two amino acid characters.
-    #                 # Remember that association test on two factors generates one p-value.
-    #
-    #                 ### Flippng based on OR
-    #                 t_OR.index = AAvar_assoc.index
-    #                 AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[refA] > 1) - 1)*(2*(x == refA)) - 1)
-    #
-    #
-    #
-    #             ### Finally processed AA character seq. of `__MAPTABLE__`.
-    #             AAs4 = AAs2*AAs3
-    #             # print("\nAAs4 : \n")
-    #             # print(AAs4)
-    #
-    #             for_new_assoc.append(AAs4)
-    #
-    #
-    #     NEW_ASSOC = pd.concat(for_new_assoc, axis=1)
-    #     # NEW_ASSOC.to_csv(_out+".assoc2.{}.txt".format(_hla_name), sep='\t', header=True, index=True)
+    if MAKING_NEW_ASSOC:
+
+        ########## < [4] Making new *.assoc file for AA markers. > ##########
+
+        print(std_MAIN_PROCESS_NAME + "Making new *.assoc file for AA markers.")
+
+        """
+        Above preprocessed `__MAPTABLE__` will be the main content of Heatmap plot.
+        (i.e. amino acid characters in each cell)
+
+        In this block, P-value information corresponding to those amino acid characters will be obtained here.
+        (i.e. the color of each of those amino acid characters)
+        Besides, the sign will be given to those p-value depending on whether its OR value is above 1 or not.
+        (ex. if OR is 0.278(<1), then its p-value will be -7.792000e-117(negative. to represent it is risky but not protective).
+
+
+
+        Rememeber that `__MAPTABLE__` was subsetted to have only AA markers of which the relative position appears in `__ASSOC_RESULT_AA__`.
+
+        As iterating over AA relative poisitions of `__MAPTABLE__` (ex. for i in [-27, -21, -18, ..., 232, 233, 234] <= filtered above.)
+        and checking how many corresponding markers are in `__ASSOC_RESULT__`, the process is considering next two major cases.
+
+        (1) Bi-allelic,
+        (2) more than Tri-allelic.
+
+        If the markers of `__ASSOC_RESULT_AA__` at each relative position is given as `df_BroughtMarkers`, then it would looks
+        like this.
+
+
+        ### More than bi-allelic ###
+
+        AAvar_assoc
+        SNP
+        AA_DRB1_-25_32665484_K    0.3133
+        AA_DRB1_-25_32665484_R    0.3173
+        AA_DRB1_-25_32665484_x    0.9150
+        Name: P, dtype: float64
+
+
+        ### Bi-allelic ###
+
+        AAvar_assoc
+        SNP
+        AA_DRB1_-25_32665484    0.3133    # The bi-allelic marker doesn't have AA character('K', 'R', ...) in the label.
+        Name: P, dtype: float64
+
+
+        (cf) Only single characters will be dealt. (i.e. The markers like 'AA_DQB1_71_32632639_exon2_AD' will be ignored.
+
+
+        """
+
+
+        # The main process will be done iterating the column of `__MAPTABLE__` DataFrame.
+        COLNAMES = __MAPTABLE__.columns.tolist()
+
+
+        for_new_assoc = []
+
+        for i in range(0, __MAPTABLE__.shape[1]):
+        # for i in range(0, 10):
+
+            print("=================================%d iteration=================================" % i, end='\r')
+
+            # t_col_maptable := `AAname` (variable in R)
+            t_col_maptable = COLNAMES[i] # ex) ('-27', '32634368', 'exon1')
+            print("\nAAname : {}".format(t_col_maptable))
+
+
+            ### Bringing markers in each relative position to `df_BroughtMarkers`.
+            df_BroughtMarkers = __ASSOC_RESULT_AA__.loc[[t_col_maptable[0]]]
+            print("\ndf_BroughtMarkers : \n{}".format(df_BroughtMarkers))
+
+
+
+            if df_BroughtMarkers.shape[0] > 0:
+
+                ### 1. P-value
+                # AAvar_assoc (P-value column)
+                AAvar_assoc = df_BroughtMarkers.loc[:, "P"]
+                # print("\nAAvar_assoc(P-value) : \n")
+                # print(AAvar_assoc)
+
+                ### 2. AA character in `__MAPTABLE__` - (variable in R : `AAs`)
+                AAs = __MAPTABLE__.iloc[:, i]
+                # print("\nAAs")
+                # print(AAs)
+
+                ### 3. OR
+                t_OR = df_BroughtMarkers.loc[:, "OR"]
+                # print("\nOR")
+                # print(t_OR)
+
+
+                ### Preparing index for `AAvar_assoc`. ###
+
+                if df_BroughtMarkers.shape[0] > 1:      ##### More than bi-allelic #####
+
+                    ### Newly index `AAvar_assoc`.
+
+                    # (variable in R) - (3) : `AAvariants`
+                    AAvariants = df_BroughtMarkers.loc[:, "SNP"]
+
+                    AAvar_assoc.index = pd.Index([item.split('_')[-1] for item in AAvariants.tolist()])
+                    # ex) ['AA_DRB1_-25_32665484_K', 'AA_DRB1_-25_32665484_R', 'AA_DRB1_-25_32665484_x']
+                    # => ['K', 'R', 'x']
+
+                    # print("\nNew AAvar_assoc : \n")
+                    # print(AAvar_assoc)
+
+                    ### Transforming AA character seq. of `__MAPTABLE__` to '-log(x)' value.
+                    AAs2 = AAs.apply(lambda x : -log10(AAvar_assoc.loc[x]))
+                    # This part actually needs exception handling for KeyError...
+
+                    ### Flippng based on OR
+                    t_OR.index = AAvar_assoc.index
+                    AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[x] > 1) - 1))
+
+
+                    """
+                    So, when Tri-allelic or more is given like this,
+
+                    SNP
+                    AA_DRB1_-25_32665484_K    0.3133
+                    AA_DRB1_-25_32665484_R    0.3173
+                    AA_DRB1_-25_32665484_x    0.9150
+                    Name: P, dtype: float64
+
+
+                    I will make this to the next form.
+
+                    K    0.3133
+                    R    0.3173
+                    x    0.9150
+                    Name: P, dtype: float64
+
+
+                    I want to use the `df_BroughtMarkers` with that index(Only AA character).
+                    Because, if that DataFrame is prepared, when `__MAPTABLE__` is given like this,
+
+                    genomic_position  32557506 32557503 32557482 32557479 32557437 32557434  \
+                    relative_position      -25      -24      -17      -16       -2       -1
+                    codon                  AAG      CTC      ACA      GCG      TTG      GCT
+                    DRB1*01:01:01            K        L        T        A        L        A
+                    DRB1*03:01:01:01         R        L        A        V        L        A
+                    DRB1*04:01:01            K        F        A        A        L        A
+                    DRB1*04:03:01            K        F        A        A        L        A
+                    DRB1*04:04:01            K        F        A        A        L        A
+                    DRB1*04:05:01            K        F        A        A        L        A
+
+                    We can make `NEW_ASSOC` just by this single command.
+
+                    > AAvar_assoc.loc[x])
+
+                    It will be much easier with .loc[] operator.
+
+                    """
+
+                elif df_BroughtMarkers.shape[0] == 1:   ##### Bi-allelic #####
+
+                    ### Newly indexing `AAvar_assoc`.
+
+                    refA = df_BroughtMarkers.loc[:, "A1"].iat[0]
+                    AAvar_assoc.index = pd.Index([refA])
+
+                    # print("\nNew AAvar_assoc : \n")
+                    # print(AAvar_assoc)
+
+                    ### Transforming AA character seq. of `__MAPTABLE__` to '-log(x)' value.
+                    AAs2 = AAs.apply(lambda x: -log10(AAvar_assoc.loc[refA]))
+                    # Same p-value will be given to two amino acid characters.
+                    # Remember that association test on two factors generates one p-value.
+
+                    ### Flippng based on OR
+                    t_OR.index = AAvar_assoc.index
+                    AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[refA] > 1) - 1)*(2*(x == refA)) - 1)
+
+
+
+                ### Finally processed AA character seq. of `__MAPTABLE__`.
+                AAs4 = AAs2*AAs3
+                # print("\nAAs4 : \n")
+                # print(AAs4)
+
+                for_new_assoc.append(AAs4)
+
+
+        NEW_ASSOC = pd.concat(for_new_assoc, axis=1)
+        # NEW_ASSOC.to_csv(_out+".assoc2.{}.txt".format(_hla_name), sep='\t', header=True, index=True)
 
 
 

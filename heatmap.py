@@ -22,9 +22,8 @@ std_WARNING_MAIN_PROCESS_NAME = "\n[%s::WARNING]: " % (os.path.basename(__file__
 
 
 
-def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logistic_HLA, _p_assoc_logistic_MERGED=None,
-            _4field=False, _p_Rscript=p_Rscript, _No_Intermediates=True, 
-            _p_src="./src", _p_data="./data"):
+def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __save_intermediates=False,
+            _p_Rscript=p_Rscript, _p_src="./src", _p_data="./data"):
 
     """
 
@@ -45,17 +44,8 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
 
     ########## < Core Variables > ##########
 
-    std_MAIN_PROCESS_NAME = "\n[%s]: " % (os.path.basename(__file__))
-    std_ERROR_MAIN_PROCESS_NAME = "\n[%s::ERROR]: " % (os.path.basename(__file__))
-
-    print(std_MAIN_PROCESS_NAME + "Conducting HeatMap Plotting.\n\n")
-
     H_MARKERS = pd.DataFrame()
-    BIM_HLA = pd.DataFrame()
-    BIM_AA = pd.DataFrame()
-    ASSOC_LOGISTIC = pd.DataFrame()
-
-    # MARKERS = pd.DataFrame()
+    __ASSOC_RESULT__ = pd.DataFrame()
 
 
     # Intermediate path.
@@ -69,107 +59,69 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
 
     ##### < Control Flags > #####
 
-    LOADING_HLA_MARKERS_DICTIONARY = 1
-    LOADING_ASSOC = 1
-    SUBSETTING_MAPTABLE1 = 1
-    SUBSETTING_MAPTABLE2 = 1
+    LOADING_MAPTABLE = 1
+    LOADING_ASSOC_RESULT = 1
+    SUBSETTING_MAPTABLE1 = 0
+    SUBSETTING_MAPTABLE2 = 0
 
-    MAKING_NEW_ASSOC = 1
-    MAKING_ASSOC_P = 1
-    EXPORTING_OUTPUT = 1
-    PLOT_HEATMAP = 1
-
-
+    MAKING_NEW_ASSOC = 0
+    MAKING_ASSOC_P = 0
+    EXPORTING_OUTPUT = 0
+    PLOT_HEATMAP = 0
 
 
-    if LOADING_HLA_MARKERS_DICTIONARY:
 
-        ########## < [1] Loading HLA_MARKERS_DICTIONARY("maptable") file > ##########
+
+    if LOADING_MAPTABLE:
+
+        ########## < [1] Loading HLA_MAPTABLE file > ##########
+
         print(std_MAIN_PROCESS_NAME + "[1] Loading HLA_MARKERS_DICTIONARY(\"maptable\") file\n")
 
-        H_MARKERS = pd.read_table(_p_maptable, sep=' |\t', engine='python', header=[0, 1, 2], index_col=0).filter(regex=_hla_name + "\*", axis=0)
+        H_MARKERS = pd.read_table(_p_maptable, sep='\s+', header=[0, 1, 2], index_col=0).filter(regex=_hla_name + "\*", axis=0)
         # filter() due to the case of "DRB2", "DRB3", etc.
 
         print(H_MARKERS.head())
-
-        # So far, Only by loading HLA marker dictionary file, we finished preparing `maptable`.
         # (2018. 6. 12) Anyway, `H_MARKERS` corresponds to "maptable" in Professor Han's pipeline.
 
 
 
-    if LOADING_ASSOC:
+    if LOADING_ASSOC_RESULT:
 
-        ########## < [2] Loading *.assoc.logistic files of AA and HLA markers. > ##########
+        ########## < [2] Loading association test result file(ex. *.assoc.logistic). > ##########
 
         print(std_MAIN_PROCESS_NAME + "Loading '*.assoc.logistc' files of AA and HLA markers.\n")
 
-        # ASSOC_LOGISTIC = pd.read_table(_p_assoc_logistic, header=0, sep='\s+', usecols=["SNP", "P", "OR", "A1"]
-        #                                ).set_index("SNP", drop=False).filter(regex="_".join(["AA", _hla_name]), axis=0).reset_index(drop=True)
+        __ASSOC_RESULT__ = pd.read_table(_p_assoc_result, header=0, sep='\s+', usecols=["SNP", "A1", "OR", "P"])
+        # print(__ASSOC_RESULT__.head())
 
-        p_AA_marker = re.compile(r"AA_{0}_".format(_hla_name))
-        p_HLA_marker = re.compile(r"HLA_{0}".format(_hla_name))
+        p_AA = re.compile(r"^AA_{0}_".format(_hla_name))
+        p_HLA = re.compile(r"^HLA_{0}".format(_hla_name))
 
-        # Just classify the cases where *.assoc.logistic files are given separately or not.
-        if (bool(_p_assoc_logistic_AA) and bool(_p_assoc_logistic_HLA)) and not bool(_p_assoc_logistic_MERGED):
-
-            # Respective
-            print("\nLoading \"*.assoc.logistic\" of AA and HLA markers.\n")
-
-            ASSOC_LOGISTIC_AA = pd.read_table(_p_assoc_logistic_AA, header=0, sep='\s+',
-                                              usecols=["SNP", "BP", "A1", "OR", "P"]
-                                              ).set_index("SNP").filter(regex=p_AA_marker, axis=0).reset_index(drop=False)
-
-            ASSOC_LOGISTIC_HLA = pd.read_table(_p_assoc_logistic_HLA, header=0, sep='\s+',
-                                               usecols=["SNP", "BP", "A1", "OR", "P"]
-                                               ).set_index("SNP").filter(regex=p_HLA_marker, axis=0).reset_index(drop=False)
+        f_AA = __ASSOC_RESULT__.loc[:, "SNP"].str.match(p_AA)
+        f_HLA = __ASSOC_RESULT__.loc[:, "SNP"].str.match(p_HLA)
 
 
-        elif not (bool(_p_assoc_logistic_AA) or bool(_p_assoc_logistic_HLA)) and bool(_p_assoc_logistic_MERGED):
+        __ASSOC_RESULT_AA__ = __ASSOC_RESULT__.loc[f_AA, :]
+        __ASSOC_RESULT_HLA__ = __ASSOC_RESULT__.loc[f_HLA, :]
 
-            # When the results of logistic regression for AA and HLA are given as merged single file.
-
-            print("\nLoading \"*.assoc.logistic\" of AA and HLA markers as single file.\n")
-
-            df_temp = pd.read_table(_p_assoc_logistic_MERGED, header=0, sep='\s+',
-                                    usecols=["SNP", "BP", "A1", "OR", "P"]).set_index("SNP")
-
-            ASSOC_LOGISTIC_AA = df_temp.filter(regex="AA_{0}_".format(_hla_name)).reset_index(drop=False)
-            ASSOC_LOGISTIC_HLA = df_temp.filter(regex="HLA_{0}".format(_hla_name)).reset_index(drop=False)
-
-
-        else:
-            print(std_ERROR_MAIN_PROCESS_NAME + "Check the file names of \"*.assoc.logistic.\"")
+        # print(__ASSOC_RESULT_AA__.head())
+        # print(__ASSOC_RESULT_HLA__.head())
 
 
         # Checking subsetted logistic regression result.
-        if ASSOC_LOGISTIC_AA.shape[0] == 0:
-            print(std_ERROR_MAIN_PROCESS_NAME + "The subsetted logistic regression result of AA markers has 0 rows(0 markers). Please check next 2 possible cases.\n"
-                                                "(1) Given logistic regression file for AA markers(\"{0}\") has 0 markers at first, or\n"
-                                                "(2) Given logistic regression file for AA markers doesn't have markers which belongs to target HLA gene(\"{1}\"). "
-                                                .format(_p_assoc_logistic_HLA, _hla_name))
+        if __ASSOC_RESULT_AA__.shape[0] == 0:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Given association result file({}) doesn't contain any Amino Acid markers. Please check it again.\n".format(_p_assoc_result))
             return -1
 
-        if ASSOC_LOGISTIC_HLA.shape[0] == 0:
-            print(std_ERROR_MAIN_PROCESS_NAME + "The subsetted logistic regression result of HLA markers has 0 rows(0 markers). Please check next 2 possible cases.\n"
-                                                "(1) Given logistic regression file for HLA markers(\"{0}\") has 0 markers at first, or\n"
-                                                "(2) Given logistic regression file for HLA markers doesn't have markers which belongs to target HLA gene(\"{1}\"). "
-                                                .format(_p_assoc_logistic_HLA, _hla_name))
-
+        if __ASSOC_RESULT_HLA__.shape[0] == 0:
+            print(std_ERROR_MAIN_PROCESS_NAME + "Given association result file({}) doesn't contain any HLA allele markers. Please check it again.\n".format(_p_assoc_result))
             return -1
 
 
 
-        HLA_MARKERS = ASSOC_LOGISTIC_HLA.loc[:, "SNP"]
-        AA_MARKERS = ASSOC_LOGISTIC_AA.loc[:, "SNP"]
-
-
-        print("\nLogistic Regression of AA :")
-        print(ASSOC_LOGISTIC_AA.head())
-        # print(ASSOC_LOGISTIC_AA.tail())
-
-        print("\nLogistic Regression of HLA :")
-        print(ASSOC_LOGISTIC_HLA.head())
-        # print(ASSOC_LOGISTIC_HLA.tail())
+        HLA_MARKERS = __ASSOC_RESULT_HLA__.loc[:, "SNP"]
+        AA_MARKERS = __ASSOC_RESULT_AA__.loc[:, "SNP"]
 
 
 
@@ -220,7 +172,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
         print(std_MAIN_PROCESS_NAME + "[3] Subsetting maptable ((3) AA marker of \"*.assoc.logistic\" of AA)")
 
         sub_H_MARKERS_columns = pd.Series(["_".join(["AA", _hla_name, item[0]]) for item in sub_H_MARKERS.columns.tolist()]) # (*****) This part is core to subset
-        # Using "relative_position" information to extract markers in both "sub_H_MARKERS" and "ASSOC_LOGISTIC".
+        # Using "relative_position" information to extract markers in both "sub_H_MARKERS" and "__ASSOC_RESULT__".
 
 
         # (3rd Filtering condition - Overlapping relative position)
@@ -313,7 +265,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
 
 
                 As iterating over AA poisition of "HLA dictionary(`sub_H_MARKERS`)" and checking how many markers of
-                "*.assoc.logistc(`ASSOC_LOGISTIC`)" there are, the process should do it considering next two major cases.
+                "*.assoc.logistc(`__ASSOC_RESULT__`)" there are, the process should do it considering next two major cases.
 
                 (1) Bi-allelic,
                 (2) more than Tri-allelic.
@@ -519,8 +471,8 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
         """
 
         ##### Processing HLA markers.
-        p_HLA_marker = re.compile("(%s\*\d{2,3}\:\d{2,3}\w?)" % (_hla_name))
-        t_hla_markers = sub_H_MARKERS.index.to_series().str.extract(p_HLA_marker, expand=False)
+        p_HLA = re.compile("(%s\*\d{2,3}\:\d{2,3}\w?)" % (_hla_name))
+        t_hla_markers = sub_H_MARKERS.index.to_series().str.extract(p_HLA, expand=False)
 
 
         ##### Processing AA markers.
@@ -597,7 +549,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_logistic_AA, _p_assoc_logisti
         os.system(command)
 
 
-    if _No_Intermediates:
+    if __save_intermediates:
 
         l_remove = [".map.txt", ".alleleP.txt", ".assoc.txt"]
 
@@ -636,67 +588,34 @@ if __name__ == "__main__" :
 
     parser.add_argument("--HLA", help="\nHLA gene to plot heatmap.\n\n", choices = ['A', 'B', 'C', 'DPA1', 'DPB1', 'DQA1', 'DQB1', 'DRB1'])
     parser.add_argument("--maptable", "-mt", help="\nMarker Dictionary file(Maptable) generated by 'IMGTt2Sequence'.\n\n")
-    parser.add_argument("--result-assoc-AA", "-lrA", help="\nAA logistic regression result file.\n\n")
-    parser.add_argument("--result-assoc-HLA", "-lrH", help="\nHLA logistic regression result file.\n\n")
-    parser.add_argument("--p_heatmapR", help="\nheatmap R source.\n\n")
+
+    parser.add_argument("--assoc-result", "-ar", help="\nAssociation test result file(ex. *.assoc.logistic).\n\n")
+
+    parser.add_argument("--save-intermediates", help="\nSave intermediate files.\n\n", action='store_true')
+    parser.add_argument("--as4field", help="\nShow HLA allele names in 4-field format\n\n", action='store_true')
 
 
 
 
     ##### < for Test > #####
 
-    # (2018. 8. 20.)
-    # args = parser.parse_args(["-hla", "DRB1",
-    #                           "-o", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/HEATMAP_in_HATK2",
-    #                           "-hd", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/Plotting/heatmap/WRAPER_TEST_DRB1.AA.markers.trim.labeled.txt",
-    #                           "-lr", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/Plotting/heatmap/forHEATMAP_test.assoc.logistic",
-    #                           "-bm", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/Plotting/heatmap/merged"
-    #                           ])
-
-    # # No more *.bim file.
-    # args = parser.parse_args(["-hla", "A",
-    #                           "-o", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/HEATMAP_Cancer",
-    #                           "-hd", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/Plotting/heatmap/forHATK_A.AA.markers.trim.labeled.txt",
-    #                           "-lrA", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/AssociationTest/CancerResearch_Example/MARKER_PANEL/data_Rev_merged.AA.CODED.assoc.logistic",
-    #                           "-lrH", "/Users/wansun/Data/HATK/data/HLA_Analysis/AssociationTest/CancerResearch_Example/MARKER_PANEL/data_Rev_merged.HLA.assoc.logistic",
-    #                           ])
-
-
-    # args = parser.parse_args(["-hla", "C",
-    #                           "-o", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/HEATMAP_Cancer_C",
-    #                           "-hd", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/Plotting/heatmap/forHATK_C.AA.markers.trim.labeled.txt",
-    #                           "-lrA", "/Users/wansun/Git_Projects/HATK_2nd/hatk_2nd/data/HLA_Analysis/AssociationTest/CancerResearch_Example/MARKER_PANEL/data_Rev_merged.AA.CODED.assoc.logistic",
-    #                           "-lrH", "/Users/wansun/Data/HATK/data/HLA_Analysis/AssociationTest/CancerResearch_Example/MARKER_PANEL/data_Rev_merged.HLA.assoc.logistic",
-    #                           ])
-
-    # # (2018. 10. 29.) HATK Integration test
-    # args = parser.parse_args(["-hla", "A",
-    #                           "-o", "/Users/wansun/Git_Projects/HATK/tests/_0_wholeProcess/HAPMAP_CEU/outputs/removelater.A",
-    #                           "-hd", "/Users/wansun/Git_Projects/HATK/tests/_0_wholeProcess/HAPMAP_CEU/outputs/HLA_MAPTABLE.A.hg18.imgt370.txt",
-    #                           "-lrA", "/Users/wansun/Git_Projects/HATK/tests/_0_wholeProcess/HAPMAP_CEU/outputs/removelater.AA.CODED.assoc.logistic",
-    #                           "-lrH", "/Users/wansun/Git_Projects/HATK/tests/_0_wholeProcess/HAPMAP_CEU/outputs/removelater.HLA.assoc.logistic",
-    #                           ])
+    # (2018. 10. 29.) HATK Integration test
+    args = parser.parse_args(["--HLA", "DQB1",
+                              "-mt", "/Users/wansun/Git_Projects/HLA_Heatmap/data/HLA_MAPTABLE_DQB1.hg19.imgt3320.txt",
+                              "-o", "tests/T1D_DQB1_test",
+                              "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_T1D.assoc.logistic",
+                              "--save-intermediates"
+                              ])
 
 
     ##### < for Publish > #####
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
     print(args)
-    # print(vars(args))
 
 
     ##### < Additional Argument Processing. > #####
 
-
-
-    # # main function execution. (old)
-    # HEATMAP(_hla_name=args.hla, _out=args.o, _p_maptable=args.hla_dict,
-    #         _p_assoc_logistic_AA=args.logistic_result_AA, _p_assoc_logistic_HLA=args.logistic_result_HLA,
-    #         _p_assoc_logistic_MERGED=args.logistic_result_MERGED,
-    #         _p_heatmapR=args.p_heatmapR,
-    #         _No_Intermediates=False)
-
     # main function execution.
-    HEATMAP(_hla_name=args.HLA, _out=args.o, _p_maptable=args.maptable,
-            _p_assoc_logistic_AA=args.result_assoc_AA, _p_assoc_logistic_HLA=args.result_assoc_HLA,
-            _No_Intermediates=False)
+    HEATMAP(_hla_name=args.HLA, _out=args.o, _p_maptable=args.maptable, _p_assoc_result=args.assoc_result,
+            __save_intermediates=args.save_intermediates, __as4field=args.as4field)

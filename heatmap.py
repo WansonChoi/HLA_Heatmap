@@ -66,8 +66,8 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
     LOADING_ASSOC_RESULT = 1
     PREPROCESSING_MAPTABLE = 1
 
-    MAKING_NEW_ASSOC = 1
-    MAKING_ASSOC_P = 0
+    MAKING_NEW_ASSOC = 0
+    MAKING_ASSOC_P = 1
     EXPORTING_OUTPUT = 0
     PLOT_HEATMAP = 0
 
@@ -398,6 +398,11 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
         ########## < [5] Making Assoc_P file. > ##########
 
         print(std_MAIN_PROCESS_NAME + "Making Assoc_P file.\n\n")
+
+        """
+        Obtaining p-values of HLA alleles in association test result. 
+        These p-value will be used to represent the color of HLA allele (Right part of Heatmap).
+        """
 
         t_assoc_HLA_MARKERS = __ASSOC_RESULT_HLA__.loc[:, "SNP"]
 

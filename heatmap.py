@@ -69,7 +69,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
     MAKING_NEW_ASSOC = 1
     MAKING_ASSOC_P = 1
     EXPORTING_OUTPUT = 1
-    PLOT_HEATMAP = 0
+    PLOT_HEATMAP = 1
 
 
 
@@ -376,7 +376,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
 
                     ### Flippng based on OR
                     t_OR.index = AAvar_assoc.index
-                    AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[refA] > 1) - 1)*(2*(x == refA)) - 1)
+                    AAs3 = AAs.apply(lambda x : (2*int(t_OR.loc[refA] > 1) - 1)*(2*int(x == refA) - 1))
 
 
 
@@ -592,12 +592,12 @@ if __name__ == "__main__" :
     ##### < for Test > #####
 
     # (2018. 10. 29.) HATK Integration test
-    args = parser.parse_args(["--HLA", "DQB1",
-                              "-mt", "/Users/wansun/Git_Projects/HLA_Heatmap/data/HLA_MAPTABLE_DQB1.hg19.imgt3320.txt",
-                              "-o", "tests/T1D_DQB1_test",
-                              "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_T1D.assoc.logistic",
-                              "--save-intermediates"
-                              ])
+    # args = parser.parse_args(["--HLA", "DQB1",
+    #                           "-mt", "/Users/wansun/Git_Projects/HLA_Heatmap/data/HLA_MAPTABLE_DQB1.hg19.imgt3320.txt",
+    #                           "-o", "tests/T1D_DQB1_test",
+    #                           "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_T1D.assoc.logistic",
+    #                           "--save-intermediates"
+    #                           ])
 
     # args = parser.parse_args(["--HLA", "DQB1",
     #                           "-mt", "/Users/wansun/Git_Projects/HLA_Heatmap/data/HLA_MAPTABLE_DQB1.hg19.imgt3320.txt",
@@ -610,7 +610,7 @@ if __name__ == "__main__" :
 
     ##### < for Publish > #####
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
     print(args)
 
 

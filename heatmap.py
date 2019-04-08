@@ -66,9 +66,9 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
     LOADING_ASSOC_RESULT = 1
     PREPROCESSING_MAPTABLE = 1
 
-    MAKING_NEW_ASSOC = 0
+    MAKING_NEW_ASSOC = 1
     MAKING_ASSOC_P = 1
-    EXPORTING_OUTPUT = 0
+    EXPORTING_OUTPUT = 1
     PLOT_HEATMAP = 0
 
 
@@ -460,12 +460,15 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
         """
 
         ##### Processing HLA markers.
-        p_HLA = re.compile("(%s\*\d{2,3}\:\d{2,3}\w?)" % (_hla_name))
-        t_hla_markers = __MAPTABLE__.index.to_series().str.extract(p_HLA, expand=False)
+
+        if not __as4field:
+            p_HLA = re.compile(r"^(%s\*\d{2,3}:\d{2,3}[A-Z]?).*" % (_hla_name))
+            t_hla_markers = __MAPTABLE__.index.to_series().str.extract(p_HLA, expand=False)
+        else:
+            t_hla_markers = __MAPTABLE__.index
 
 
         ##### Processing AA markers.
-        # t_aa_markers = __MAPTABLE__.columns.to_frame().loc[:, "relative_position"]
         t_aa_markers = __MAPTABLE__.columns.to_frame().loc[:, "AA_rel_pos"]
 
         print("\nt_hla_markers :\n{0}\nt_aa_markers :\n{1}\n".format(t_hla_markers, t_aa_markers))
@@ -595,6 +598,14 @@ if __name__ == "__main__" :
                               "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_T1D.assoc.logistic",
                               "--save-intermediates"
                               ])
+
+    # args = parser.parse_args(["--HLA", "DQB1",
+    #                           "-mt", "/Users/wansun/Git_Projects/HLA_Heatmap/data/HLA_MAPTABLE_DQB1.hg19.imgt3320.txt",
+    #                           "-o", "tests/T1D_DQB1_test",
+    #                           "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_T1D.assoc.logistic",
+    #                           "--as4field",
+    #                           "--save-intermediates"
+    #                           ])
 
 
     ##### < for Publish > #####

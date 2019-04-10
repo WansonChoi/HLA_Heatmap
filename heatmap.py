@@ -351,7 +351,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
                     DRB1*04:04:01            K        F        A        A        L        A
                     DRB1*04:05:01            K        F        A        A        L        A
 
-                    We can make `NEW_ASSOC` just by this single command.
+                    We can make `__NEW_ASSOC__` just by this single command.
 
                     > AAvar_assoc.loc[x])
 
@@ -388,8 +388,8 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
                 for_new_assoc.append(AAs4)
 
 
-        NEW_ASSOC = pd.concat(for_new_assoc, axis=1)
-        # NEW_ASSOC.to_csv(_out+".assoc2.{}.txt".format(_hla_name), sep='\t', header=True, index=True)
+        __NEW_ASSOC__ = pd.concat(for_new_assoc, axis=1)
+        # __NEW_ASSOC__.to_csv(_out+".assoc2.{}.txt".format(_hla_name), sep='\t', header=True, index=True)
 
 
 
@@ -402,37 +402,54 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
         """
         Obtaining p-values of HLA alleles in association test result. 
         These p-value will be used to represent the color of HLA allele (Right part of Heatmap).
+        
+        1-field HLA allele names should be filtered out.
+        
         """
 
-        t_assoc_HLA_MARKERS = __ASSOC_RESULT_HLA__.loc[:, "SNP"]
+        ### Excluding 1-field HLA alleles in `__ASSOC_RESULT_HLA__`.
 
-        print("\nHLA markers :\n")
-        print(t_assoc_HLA_MARKERS.head())
+        t_HLA_alleles_in_assoc = __ASSOC_RESULT_HLA__.loc[:, ["SNP", "P", "OR"]]
 
-        flag_subHLAs = __MAPTABLE__.index.to_series().apply(lambda x : "HLA_"+x).isin(t_assoc_HLA_MARKERS).tolist()
+        print("\nHLA alleles in Association Test result: ")
+        print(t_HLA_alleles_in_assoc)
 
-        sub_ASSOC_LOGISTIC_HLA = __ASSOC_RESULT_HLA__.loc[flag_subHLAs, ["P", "OR"]]
-
-        HLA_P = sub_ASSOC_LOGISTIC_HLA.loc[:, "P"].values # as numpy array
-        print("\n\"P-values\" of HLA markers : \n")
-        print(HLA_P)
-        print(type(HLA_P))
-
-        HLA_OR = sub_ASSOC_LOGISTIC_HLA.loc[:, "OR"].values # as numpy array
-        print("\n\"OR\" of HLA markers : \n")
-        print(HLA_OR)
+        t_HLA_alleles_in_MAPTABLE = __MAPTABLE__.index.to_frame().apply(lambda x : "HLA_"+x).reset_index(drop=False)
+        t_HLA_alleles_in_MAPTABLE.columns = pd.Index(["HLA1", "HLA2"])
+        print("\nHLA alleles in `__MAPTABLE__`: ")
+        print(t_HLA_alleles_in_MAPTABLE)
 
 
-        t_alleleP = np.apply_along_axis(lambda x : -np.log10(x), 0, HLA_P)
-        t_OR = np.apply_along_axis(lambda x : (2*(x > 1) - 1), 0, HLA_OR)
+        df_No1Field = t_HLA_alleles_in_MAPTABLE.merge(t_HLA_alleles_in_assoc, left_on="HLA2", right_on="SNP", how="left").loc[:, ["HLA1", "OR", "P"]]
+        print(df_No1Field)
 
-        ### Processed "alleleP" for HLA markers.
-        alleleP = t_alleleP*t_OR
+        sr_log10P = df_No1Field.loc[:, "P"].apply(lambda x : -log10(x))
+        # print("\nsr_log10P : \n{}\n".format(sr_log10P))
 
-        print("\nprocessed `alleleP` : \n")
-        print(alleleP)
+        sr_OR = df_No1Field.loc[:, "OR"].apply(lambda x : (2*int(x > 1) -1))
+        # print("\nsr_OR : \n{}\n".format(sr_OR))
 
 
+        __alleleP__ = sr_log10P*sr_OR
+        __alleleP__.index = df_No1Field.loc[:, "HLA1"]
+
+        print("\nsr_alleleP : \n{}\n".format(__alleleP__))
+
+
+        """
+        (2019. 04. 09.)
+        New major bug found.
+
+        In the process of removing 1-field allele in above `__alleleP__`, indexes are mismatched.
+
+        In next block, 2-field alleles are extracted in `__MAPTABLE__` dataframe but using these extracted 2-field alleles as an index for
+        `__alleleP__` doesn't make sense. Consequently, Processed -log10(P) values in `__alleleP__` are given to wrong HLA alleles.
+
+        So, indexing should be done to `__alleleP__` here, and 2-field alleles should be extracted from this `__alleleP__` dataframe.
+        
+        => Solved by using merge() function.
+
+        """
 
 
     if EXPORTING_OUTPUT:
@@ -450,7 +467,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
         
 
         (2018. 8. 23.)
-        In this code block, the proper index should be made and assigned to `__MAPTABLE__`, `alleleP` and `NEW_ASSOC`.       
+        In this code block, the proper index should be made and assigned to `__MAPTABLE__`, `__alleleP__` and `__NEW_ASSOC__`.       
         Also, as professor Han requested, the HLA allele names in final index should be in the form of 2-field.
         So, i need the marker labels in the next forms
         
@@ -480,31 +497,30 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
         __MAPTABLE__.columns = t_aa_markers
         __MAPTABLE__.columns.name = None
 
-        # `alleleP`
-        alleleP = pd.DataFrame(alleleP, index=t_hla_markers)
-        alleleP.columns.name = "0" # dummy index to make it loaded in R more efficiently.
+        # `__alleleP__`
+        __alleleP__.index = t_hla_markers
 
-        # `NEW_ASSOC`
-        NEW_ASSOC.index = t_hla_markers
-        NEW_ASSOC.columns = t_aa_markers
-        NEW_ASSOC.columns.name = None
+        # `__NEW_ASSOC__`
+        __NEW_ASSOC__.index = t_hla_markers
+        __NEW_ASSOC__.columns = t_aa_markers
+        __NEW_ASSOC__.columns.name = None
 
 
 
         print("\n(1) __MAPTABLE__\n")
         print(__MAPTABLE__.head())
 
-        print("\n(2) alleleP\n")
-        print(alleleP.head())
+        print("\n(2) __alleleP__\n")
+        print(__alleleP__.head())
 
-        print("\n(3) NEW_ASSOC\n")
-        print(NEW_ASSOC.head())
+        print("\n(3) __NEW_ASSOC__\n")
+        print(__NEW_ASSOC__.head())
 
 
 
         __MAPTABLE__.to_csv(_out+'.map.txt', sep='\t', header=True, index=True)
-        alleleP.to_csv(_out+".alleleP.txt", sep='\t', header=True, index=True)
-        NEW_ASSOC.to_csv(_out+".assoc.txt", sep='\t', header=True, index=True)
+        __alleleP__.to_csv(_out+".alleleP.txt", sep='\t', header=True, index=True)
+        __NEW_ASSOC__.to_csv(_out+".assoc.txt", sep='\t', header=True, index=True)
 
 
 
@@ -543,7 +559,7 @@ def HEATMAP(_hla_name, _out, _p_maptable, _p_assoc_result, __as4field=False, __s
 
     if not __save_intermediates:
 
-        l_remove = [".map.txt", ".alleleP.txt", ".assoc.txt"]
+        l_remove = [".map.txt", ".__alleleP__.txt", ".assoc.txt"]
 
         for item in l_remove:
 
@@ -581,7 +597,7 @@ if __name__ == "__main__" :
     parser.add_argument("--HLA", help="\nHLA gene to plot heatmap.\n\n", choices = ['A', 'B', 'C', 'DPA1', 'DPB1', 'DQA1', 'DQB1', 'DRB1'])
     parser.add_argument("--maptable", "-mt", help="\nMarker Dictionary file(Maptable) generated by 'IMGTt2Sequence'.\n\n")
 
-    parser.add_argument("--assoc-result", "-ar", help="\nAssociation test result file(ex. *.assoc.logistic).\n\n")
+    parser.add_argument("--assoc-result", "-ar", help="\nAssociation test result file(ex. *.assoc.logistic).\n\n", required=True)
 
     parser.add_argument("--save-intermediates", help="\nSave intermediate files.\n\n", action='store_true')
     parser.add_argument("--as4field", help="\nShow HLA allele names in 4-field format\n\n", action='store_true')
@@ -606,6 +622,13 @@ if __name__ == "__main__" :
     #                           "--as4field",
     #                           "--save-intermediates"
     #                           ])
+
+    # args = parser.parse_args(["--HLA", "DRB1",
+    #                       "-mt", "data/HLA_MAPTABLE_DRB1.hg19.imgt3320.txt",
+    #                       "-o", "tests/WTCCC_RA_DRB1/WTCCC_RA_DRB1",
+    #                       "-ar", "/Users/wansun/Git_Projects/HLA_Heatmap/data/example/20190327_WTCCC_RA.assoc.logistic",
+    #                       "--save-intermediates"
+    #                       ])
 
 
     ##### < for Publish > #####

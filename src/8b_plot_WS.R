@@ -34,11 +34,11 @@ args5.plot.outf_ = args[5]
 ### Example
 
 # (2019. 04. 08.)
-# args1.disease.map_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/T1D_DQB1_test.map.txt"
-# args2.disease.assoc_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/T1D_DQB1_test.assoc.txt"
-# args3.disease.alleleP_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/T1D_DQB1_test.alleleP.txt"
-# args4.HLA_name_ = "DQB1"
-# args5.plot.outf_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/WTCCC_T1D_DQB1"
+# args1.disease.map_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/WTCCC_RA_DRB1/WTCCC_RA_DRB1.map.txt"
+# args2.disease.assoc_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/WTCCC_RA_DRB1/WTCCC_RA_DRB1.assoc.txt"
+# args3.disease.alleleP_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/WTCCC_RA_DRB1/WTCCC_RA_DRB1.alleleP.txt"
+# args4.HLA_name_ = "DRB1"
+# args5.plot.outf_ = "/Users/wansun/Git_Projects/HLA_Heatmap/tests/WTCCC_RA_DRB1/WTCCC_RA_DRB1_heatmapanalysis.pdf"
 
 
 # ### Arguments checking
@@ -89,11 +89,11 @@ colnames(P)[ncol(P)]=""
 ########## < Main Plotting > ##########
 
 brew=rev(brewer.pal(11,"Spectral"))
+mycol=colorRampPalette(brew)(100)
 
 pdf(paste0(args5.plot.outf_, ".pdf"), width=7, height=5.2, pointsize=8) # argument[5]
 par(mar=c(5,4,4,3))
 
-mycol=colorRampPalette(brew)(100)
 lmat=matrix(c(0,3,2,1,0,4), 3, 2, byrow=T)
 lwid=c(1, 12)
 lhei=c(1, 4, 0.6)
@@ -109,11 +109,11 @@ heatmap.2(P, Rowv=F, Colv=F, dendrogram="none", col=mycol,
           colsep=c(org.ncol), sepcolor="white", sepwidth=.6,
           
           key.title="this is keys", key.par=list(mar=c(4, 4, 0.5 ,10)), ## Bottom, Left, Top, Right
-          key.xlab=bquote(-log[10]~italic("P")),
-          key.xtickfun=function() {
-            breaks=pretty(parent.frame()$breaks)
-            list(at=parent.frame()$scale01(breaks), labels=abs(breaks))
-          }
+          key.xlab=bquote(-log[10]~italic("P"))
+          # key.xtickfun=function() {
+          #   breaks=pretty(parent.frame()$breaks)
+          #   return(list(at=parent.frame()$scale01(breaks), labels=abs(breaks)))
+          # }
 )
 ### Adding arrows (2019. 04. 08.)
 # toward right

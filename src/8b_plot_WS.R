@@ -99,7 +99,6 @@ lwid=c(1, 12)
 lhei=c(1, 4, 0.6)
 
 heatmap.2(P, Rowv=F, Colv=F, dendrogram="none", col=mycol,
-          # density.info=c("histogram","density","none"), 
           density.info="none",
           trace="none", 
           margin=c(6,6), 
@@ -109,11 +108,11 @@ heatmap.2(P, Rowv=F, Colv=F, dendrogram="none", col=mycol,
           colsep=c(org.ncol), sepcolor="white", sepwidth=.6,
           
           key.title="this is keys", key.par=list(mar=c(4, 4, 0.5 ,10)), ## Bottom, Left, Top, Right
-          key.xlab=bquote(-log[10]~italic("P"))
-          # key.xtickfun=function() {
-          #   breaks=pretty(parent.frame()$breaks)
-          #   return(list(at=parent.frame()$scale01(breaks), labels=abs(breaks)))
-          # }
+          key.xlab=bquote(-log[10]~italic("P")),
+          key.xtickfun=function() {
+            breaks=pretty(parent.frame()$breaks)
+            return(list(at=parent.frame()$scale01(as.numeric(breaks), parent.frame()$min.raw, parent.frame()$max.raw), labels=abs(breaks)))
+          }
 )
 ### Adding arrows (2019. 04. 08.)
 # toward right
@@ -127,5 +126,3 @@ Arrows(0.44,-0.135, 0.16,-0.135, xpd=T, arr.type='triangle',
 text(x=0.105, y=-0.135, labels = "Protective", xpd=T)
 
 dev.off()
-
-
